@@ -1,0 +1,50 @@
+import subprocess
+import argparse
+
+def get_network_services():
+    """Get a list of all network services"""
+    result = subprocess.run(['networksetup', '-listallnetworkservices'], capture_output=True, text=True)
+    services = result.stdout.splitlines()[1:]  # Skip the first line which is not a service
+    return services
+
+def change_dns(service, dns_addresses):
+    """Change DNS for a specific network service"""
+    try:
+        subprocess.run(['networksetup', '-setdnsservers', service] + dns_addresses, check=True)
+        print(f"Successfully changed DNS for {service} to {', '.join(dns_addresses)}")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to change DNS for {service}: {e}")
+
+def display_current_dns(service):
+    """Display current DNS settings for a specific network service"""
+    result = subprocess.run(['networksetup', '-getdnsservers', service], capture_output=True, text=True)
+    dns_servers = result.stdout.strip()
+    if dns_servers == "There aren't any DNS Servers set on " + service + ".":
+        print(f"{service} has no DNS servers set.")
+    else:
+        print(f"Current DNS servers for {service}: {dns_servers}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Change DNS settings on a Mac.")
+    parser.add_argument('dns_addresses', nargs='+', help="DNS addresses to set (e.g. 8.8.8.8 8.8.4.4)")
+    args = parser.parse_args()
+
+    services = get_network_services()
+
+    print("Available network services:")
+    for idx, service in enumerate(services, 1):
+        print(f"{idx}. {service}")
+    
+    service_idx = int(input("Select the network service number to change DNS: ")) - 1
+
+    if 0 <= service_idx < len(services):
+        service = services[service_idx]
+        print(f"Changing DNS for {service}...")
+        display_current_dns(service)
+        change_dns(service, args.dns_addresses)
+        display_current_dns(service)
+    else:
+        print("Invalid selection. Exiting...")
+
+if __name__ == "__main__":
+    main()
